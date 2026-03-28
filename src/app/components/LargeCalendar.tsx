@@ -4,10 +4,9 @@ import { Button } from './ui/button';
 
 interface LargeCalendarProps {
   onDateClick: (date: Date) => void;
-  onMonthClick: (year: number, month: number) => void;
 }
 
-export function LargeCalendar({ onDateClick, onMonthClick }: LargeCalendarProps) {
+export function LargeCalendar({ onDateClick }: LargeCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const year = currentDate.getFullYear();
@@ -53,32 +52,29 @@ export function LargeCalendar({ onDateClick, onMonthClick }: LargeCalendarProps)
   const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
 
   return (
-    <div className="w-full h-full flex flex-col bg-white rounded-2xl shadow-xl p-8">
+    <div className="w-full aspect-[4/3] flex flex-col bg-white rounded-2xl shadow-xl p-8">
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <Button
           onClick={prevMonth}
           variant="outline"
           size="icon"
-          className="h-12 w-12"
+          className="h-16 w-16"
         >
-          <ChevronLeft className="h-6 w-6" />
+          <ChevronLeft className="h-8 w-8" />
         </Button>
-        
-        <button
-          onClick={() => onMonthClick(year, month + 1)}
-          className="text-4xl font-bold transition-all duration-200 ease-in-out hover:scale-110 cursor-pointer"
-        >
+
+        <h2 className="text-6xl font-bold">
           {year}년 {month + 1}월
-        </button>
-        
+        </h2>
+
         <Button
           onClick={nextMonth}
           variant="outline"
           size="icon"
-          className="h-12 w-12"
+          className="h-16 w-16"
         >
-          <ChevronRight className="h-6 w-6" />
+          <ChevronRight className="h-8 w-8" />
         </Button>
       </div>
 
@@ -87,7 +83,7 @@ export function LargeCalendar({ onDateClick, onMonthClick }: LargeCalendarProps)
         {weekDays.map((day, index) => (
           <div
             key={day}
-            className={`text-center py-3 font-semibold text-lg ${
+            className={`text-center py-4 font-semibold text-2xl ${
               index === 0 ? 'text-red-600' : index === 6 ? 'text-blue-600' : ''
             }`}
           >
@@ -110,7 +106,7 @@ export function LargeCalendar({ onDateClick, onMonthClick }: LargeCalendarProps)
               key={date.toISOString()}
               onClick={() => onDateClick(date)}
               className={`
-                flex items-center justify-center rounded-xl text-2xl font-medium
+                aspect-square flex items-center justify-center rounded-xl text-3xl font-medium
                 border-2 border-gray-200
                 transition-all hover:shadow-lg hover:scale-105 hover:border-indigo-400
                 ${!currentMonth ? 'text-gray-300 bg-gray-50' : 'bg-white'}
