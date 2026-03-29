@@ -1,22 +1,27 @@
-import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface LargeCalendarProps {
+  currentDate: Date; // 부모(App.tsx)에서 관리하는 현재 달력 날짜
+  setCurrentDate: (date: Date) => void; // 달력을 변경하는 함수
   onDateClick: (date: Date) => void;
   onMonthClick: (year: number, month: number) => void;
 }
 
-export function LargeCalendar({ onDateClick, onMonthClick }: LargeCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-
+export function LargeCalendar({ 
+  currentDate, 
+  setCurrentDate, 
+  onDateClick, 
+  onMonthClick 
+}: LargeCalendarProps) {
+  
+  // 중요: 내부의 useState는 삭제되었습니다. 부모의 props를 사용합니다.
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // 해당 월의 첫 날과 마지막 날
+  // 해당 월의 첫 날과 마지막 날 계산
   const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-
+  
   // 달력에서 시작할 날짜 (이전 월의 날짜 포함)
   const startDate = new Date(firstDay);
   startDate.setDate(startDate.getDate() - firstDay.getDay());
@@ -29,6 +34,7 @@ export function LargeCalendar({ onDateClick, onMonthClick }: LargeCalendarProps)
     current.setDate(current.getDate() + 1);
   }
 
+  // 부모의 상태를 변경하여 이전/다음 달로 이동
   const prevMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
   };

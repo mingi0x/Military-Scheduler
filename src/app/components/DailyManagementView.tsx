@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, FileText } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -21,25 +21,47 @@ interface DailyManagementViewProps {
   onBack: () => void;
 }
 
+
+const notifyPythonAboutChange = async (name: string, action: 'add' | 'remove') => {
+  try {
+    await fetch('https://humble-system-v6ww966q6jr92x9ww-8000.app.github.dev/api/update-exceptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        name: name,      // 대상자 이름
+        action: action   // 'add' 또는 'remove'
+      }),
+    });
+  } catch (error) {
+    console.error("Python 서버 통신 실패:", error);
+  }
+};
 // 샘플 인원 데이터
-const SAMPLE_PEOPLE = [
-  '김영철',
-  '이민수',
-  '박지훈',
-  '정수연',
-  '최동욱',
-  '강민지',
-  '윤서준',
-  '임하은',
-  '조성민',
-  '한예린',
-];
+
+import allMemberData from '/workspaces/Largeinteractivecalendar/data/all_member_data.json';
+
+// 2. 계급과 이름을 합쳐서 배열 생성
+// Vite는 JSON을 가져오면 자동으로 객체(또는 배열)로 변환해줍니다.
+const SAMPLE_PEOPLE = allMemberData.map((person: any) => `${person.이름}`);
 
 export function DailyManagementView({ selectedDate, onBack }: DailyManagementViewProps) {
-  const [exceptions, setExceptions] = useState<ExceptionPerson[]>([]);
+  // 1. 초기값 설정: localStorage에 저장된 값이 있으면 가져오고, 없으면 빈 배열
+  const [exceptions, setExceptions] = useState<ExceptionPerson[]>(() => {
+    const saved = localStorage.getItem(`exceptions_${selectedDate.toDateString()}`);
+    return saved ? JSON.parse(saved) : [];
+  });
+  
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dutyGenerated, setDutyGenerated] = useState(false);
+
+  // 2. exceptions 상태가 변할 때마다 localStorage에 자동 저장
+  useEffect(() => {
+    localStorage.setItem(
+      `exceptions_${selectedDate.toDateString()}`,
+      JSON.stringify(exceptions)
+    );
+  }, [exceptions, selectedDate]);
 
   const formatDate = (date: Date) => {
     return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
@@ -56,18 +78,26 @@ export function DailyManagementView({ selectedDate, onBack }: DailyManagementVie
       return;
     }
 
-    const newException: ExceptionPerson = {
-      id: Date.now().toString(),
-      name,
-      reason: '',
-    };
+    const newException = { id: Date.now().toString(), name, reason: '' };
     setExceptions([...exceptions, newException]);
+    
+    // 파이썬에 추가 알림 전송
+    notifyPythonAboutChange(name, 'add'); 
+    
     setShowSearch(false);
     setSearchQuery('');
   };
 
   const handleRemoveException = (id: string) => {
-    setExceptions(exceptions.filter((ex) => ex.id !== id));
+    const personToRemove = exceptions.find(ex => ex.id === id);
+  
+    if (personToRemove) {
+      const updated = exceptions.filter((ex) => ex.id !== id);
+      setExceptions(updated);
+      
+      // 파이썬에 삭제된 사람 이름 전송
+      notifyPythonAboutChange(personToRemove.name, 'remove');
+    }
   };
 
   const handleUpdateException = (id: string, value: string) => {
@@ -78,9 +108,36 @@ export function DailyManagementView({ selectedDate, onBack }: DailyManagementVie
     );
   };
 
-  const handleGenerateDuty = () => {
-    setDutyGenerated(true);
-  };
+  const handleGenerateDuty = async () => {
+  try {
+    // 1. 서버에 근무표 생성 요청 보내기
+    const response = await fetch("https://humble-system-v6ww966q6jr92x9ww-8000.app.github.dev/api/generate-duty", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      // 필요하다면 현재 선택된 연도/월 정보를 같이 보낼 수 있습니다.
+      // body: JSON.stringify({ year: 2024, month: 5 }),
+    });
+
+    if (!response.ok) {
+      throw new Error("서버 응답에 문제가 있습니다.");
+    }
+
+    const data = await response.json();
+
+    if (data.status === "success") {
+      // 2. 서버 작업이 성공하면 화면 상태를 변경
+      setDutyGenerated(true);
+      alert("✅ 근무표가 성공적으로 생성되었습니다!");
+    } else {
+      alert("❌ 생성 실패: " + data.message);
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    alert("서버와 통신하는 중 오류가 발생했습니다.");
+  }
+};
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-gray-50">
@@ -182,8 +239,8 @@ export function DailyManagementView({ selectedDate, onBack }: DailyManagementVie
                       <SelectContent>
                         <SelectItem value="휴가">휴가</SelectItem>
                         <SelectItem value="외출">외출</SelectItem>
-                        <SelectItem value="병가">병가</SelectItem>
-                        <SelectItem value="교육">교육</SelectItem>
+                        <SelectItem value="외박">외박</SelectItem>
+                        <SelectItem value="배차">배차</SelectItem>
                         <SelectItem value="출장">출장</SelectItem>
                         <SelectItem value="기타">기타</SelectItem>
                       </SelectContent>
